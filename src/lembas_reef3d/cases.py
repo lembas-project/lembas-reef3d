@@ -3,6 +3,7 @@ import subprocess
 from functools import cached_property
 from pathlib import Path
 
+import toml
 from jinja2 import Environment, FileSystemLoader
 from lembas import Case, InputParameter, step
 from rich.logging import RichHandler
@@ -27,6 +28,8 @@ TEMPLATE_ENV = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 class Reef3dCase(Case):
     num_processors = InputParameter(default=8)
     force = InputParameter(default=False)
+    wave_height = InputParameter(type=float)
+    wave_length = InputParameter(type=float)
 
     @staticmethod
     def log(msg: str, *args, level: int = logging.INFO) -> None:
@@ -34,7 +37,7 @@ class Reef3dCase(Case):
 
     @cached_property
     def case_dir(self):
-        return Path.cwd().resolve() / "cases" / "case_0"
+        return Path.cwd().resolve() / "cases" / f"H={self.wave_height:0.2f}_L={self.wave_length:0.2f}"
 
     @step(condition=lambda self: not self.case_dir.exists() or self.force)
     def create_case_dir_if_not_exists(self):
@@ -61,6 +64,17 @@ class Reef3dCase(Case):
         self.log("Running REEF3d")
         template = TEMPLATE_ENV.get_template(CONTROL_FILENAME)
         with (self.case_dir / CONTROL_FILENAME).open("w") as fp:
-            fp.write(template.render(num_processors=self.num_processors))
+            fp.write(template.render(case=self))
 
         subprocess.run(["mpirun", "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir))
+
+    def _write_lembas_file(self):
+        if self.case_dir:
+            self.create_case_dir_if_not_exists()
+            data = {"inputs": self.inputs, "case-handler": self.casehandler_full_name}
+            with (self.case_dir / "lembas-case.toml").open("w") as fp:
+                toml.dump({"lembas": data}, fp)
+
+    def run(self) -> None:
+        self._write_lembas_file()  # TODO: move to parent?
+        return super().run()
