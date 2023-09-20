@@ -20,7 +20,7 @@ class Reef3dCase(Case):
     wave_length = InputParameter(type=float)
 
     @cached_property
-    def case_dir(self):
+    def case_dir(self) -> Path:
         return Path.cwd().resolve() / "cases" / f"H={self.wave_height:0.2f}_L={self.wave_length:0.2f}"
 
     @step(condition=lambda self: not self.case_dir.exists() or self.force)
