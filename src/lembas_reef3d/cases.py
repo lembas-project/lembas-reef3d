@@ -39,7 +39,7 @@ class Reef3dCase(Case):
 
     @step(
         requires="create_case_dir_if_not_exists",
-        condition=lambda self: not list(self.case_dir.glob("grid-*.dat")),
+        condition=lambda self: not list(self.case_dir.glob("DIVEMesh_*")),
     )
     def generate_mesh(self):
         self.log("Generating mesh using DIVEMesh")
@@ -49,3 +49,16 @@ class Reef3dCase(Case):
             fp.write(template.render(num_processors=self.num_processors))
 
         subprocess.run(["divemesh"], cwd=str(self.case_dir))
+
+    @step(
+        requires="generate_mesh",
+        condition=lambda self: not list(self.case_dir.glob("REEF3D_*")),
+    )
+    def run_reef3d(self):
+        self.log("Running REEF3d")
+        mesh_filename = "ctrl.txt"
+        template = TEMPLATE_ENV.get_template(mesh_filename)
+        with (self.case_dir / mesh_filename).open("w") as fp:
+            fp.write(template.render(num_processors=self.num_processors))
+
+        subprocess.run(["mpirun", "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir))
