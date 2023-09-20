@@ -60,3 +60,4 @@ venv.bak/
 
 # Version file
 /src/lembas/_version.py
+/tutorials/regular-wave-propagation/cases/

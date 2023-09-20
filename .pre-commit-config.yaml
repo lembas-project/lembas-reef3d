@@ -36,6 +36,7 @@ repos:
   rev: 6.0.0
   hooks:
   - id: flake8
+    args: ["--ignore", "E203,E501,W503"]
 - repo: https://github.com/igorshubovych/markdownlint-cli
   rev: v0.35.0
   hooks:
