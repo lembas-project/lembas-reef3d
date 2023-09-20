@@ -1,4 +1,3 @@
-import logging
 import subprocess
 from functools import cached_property
 from pathlib import Path
@@ -6,20 +5,9 @@ from pathlib import Path
 import toml
 from jinja2 import Environment, FileSystemLoader
 from lembas import Case, InputParameter, step
-from rich.logging import RichHandler
 
 MESH_FILENAME = "control.txt"
 CONTROL_FILENAME = "ctrl.txt"
-
-FORMAT = "%(message)s"
-logging.basicConfig(
-    level="NOTSET",
-    format=FORMAT,
-    datefmt="[%X]",
-    handlers=[RichHandler(show_level=False, show_path=False, show_time=False)],
-)
-logger = logging.getLogger(__name__)
-
 
 TEMPLATE_DIR = Path.cwd().resolve() / "template"
 TEMPLATE_ENV = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
@@ -30,10 +18,6 @@ class Reef3dCase(Case):
     force = InputParameter(default=False)
     wave_height = InputParameter(type=float)
     wave_length = InputParameter(type=float)
-
-    @staticmethod
-    def log(msg: str, *args, level: int = logging.INFO) -> None:
-        logger.log(level, msg, *args)
 
     @cached_property
     def case_dir(self):
