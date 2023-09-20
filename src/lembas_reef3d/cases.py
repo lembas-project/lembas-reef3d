@@ -26,6 +26,7 @@ TEMPLATE_ENV = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 class Reef3dCase(Case):
     num_processors = InputParameter(default=8)
+    force = InputParameter(default=False)
 
     @staticmethod
     def log(msg: str, *args, level: int = logging.INFO) -> None:
@@ -35,14 +36,14 @@ class Reef3dCase(Case):
     def case_dir(self):
         return Path.cwd().resolve() / "cases" / "case_0"
 
-    @step(condition=lambda self: not self.case_dir.exists())
+    @step(condition=lambda self: not self.case_dir.exists() or self.force)
     def create_case_dir_if_not_exists(self):
         self.log("Creating case directory: %s", self.case_dir)
         self.case_dir.mkdir(parents=True, exist_ok=True)
 
     @step(
         requires="create_case_dir_if_not_exists",
-        condition=lambda self: not list(self.case_dir.glob("DIVEMesh_*")),
+        condition=lambda self: not list(self.case_dir.glob("DIVEMesh_*")) or self.force,
     )
     def generate_mesh(self):
         self.log("Generating mesh using DIVEMesh")
@@ -54,7 +55,7 @@ class Reef3dCase(Case):
 
     @step(
         requires="generate_mesh",
-        condition=lambda self: not list(self.case_dir.glob("REEF3D_*")),
+        condition=lambda self: not list(self.case_dir.glob("REEF3D_*")) or self.force,
     )
     def run_reef3d(self):
         self.log("Running REEF3d")
