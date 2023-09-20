@@ -1,0 +1,62 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*$py.class
+.DS_Store
+
+# Distribution / packaging
+.Python
+/build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Ignore poetry.lock for a library
+poetry.lock
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+.pytest_cache/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+
+# Editor and misc backup files - anywhere
+*~
+.*~
+*.swp
+.idea
+.vscode/
+
+# Example case outputs
+/examples/**/cases/
+
+# Generated documentation
+/docs/build/
+/docs/source/api/
+
+# Version file
+/src/lembas/_version.py
