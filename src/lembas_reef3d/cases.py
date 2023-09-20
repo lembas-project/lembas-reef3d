@@ -7,6 +7,9 @@ from jinja2 import Environment, FileSystemLoader
 from lembas import Case, InputParameter, step
 from rich.logging import RichHandler
 
+MESH_FILENAME = "control.txt"
+CONTROL_FILENAME = "ctrl.txt"
+
 FORMAT = "%(message)s"
 logging.basicConfig(
     level="NOTSET",
@@ -43,9 +46,8 @@ class Reef3dCase(Case):
     )
     def generate_mesh(self):
         self.log("Generating mesh using DIVEMesh")
-        mesh_filename = "control.txt"
-        template = TEMPLATE_ENV.get_template(mesh_filename)
-        with (self.case_dir / mesh_filename).open("w") as fp:
+        template = TEMPLATE_ENV.get_template(MESH_FILENAME)
+        with (self.case_dir / MESH_FILENAME).open("w") as fp:
             fp.write(template.render(num_processors=self.num_processors))
 
         subprocess.run(["divemesh"], cwd=str(self.case_dir))
@@ -56,9 +58,8 @@ class Reef3dCase(Case):
     )
     def run_reef3d(self):
         self.log("Running REEF3d")
-        mesh_filename = "ctrl.txt"
-        template = TEMPLATE_ENV.get_template(mesh_filename)
-        with (self.case_dir / mesh_filename).open("w") as fp:
+        template = TEMPLATE_ENV.get_template(CONTROL_FILENAME)
+        with (self.case_dir / CONTROL_FILENAME).open("w") as fp:
             fp.write(template.render(num_processors=self.num_processors))
 
         subprocess.run(["mpirun", "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir))
