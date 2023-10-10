@@ -14,10 +14,10 @@ TEMPLATE_ENV = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 
 class RegularWaveCase(Case):
-    num_processors = InputParameter(default=8)
+    num_processors = InputParameter(default=8, min=1)
     force = InputParameter(default=False)
-    wave_height = InputParameter(type=float)
-    wave_length = InputParameter(type=float)
+    wave_height = InputParameter(type=float, min=0.0)
+    wave_length = InputParameter(type=float, min=0.0)
 
     @cached_property
     def case_dir(self) -> Path:
