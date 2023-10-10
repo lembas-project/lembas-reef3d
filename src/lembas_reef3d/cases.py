@@ -13,7 +13,7 @@ TEMPLATE_DIR = Path.cwd().resolve() / "template"
 TEMPLATE_ENV = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 
-class Reef3dCase(Case):
+class RegularWaveCase(Case):
     num_processors = InputParameter(default=8)
     force = InputParameter(default=False)
     wave_height = InputParameter(type=float)

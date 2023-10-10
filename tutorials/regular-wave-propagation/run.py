@@ -1,10 +1,10 @@
 from lembas import CaseList
 
-from lembas_reef3d import Reef3dCase
+from lembas_reef3d import RegularWaveCase
 
 case_list = CaseList()
 case_list.add_cases_by_parameter_sweep(
-    Reef3dCase,
+    RegularWaveCase,
     wave_height=[0.02, 0.04],
     wave_length=4.0,
 )
