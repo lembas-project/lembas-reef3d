@@ -21,7 +21,11 @@ class RegularWaveCase(Case):
 
     @cached_property
     def case_dir(self) -> Path:
-        return Path.cwd().resolve() / "cases" / f"H={self.wave_height:0.2f}_L={self.wave_length:0.2f}"
+        return (
+            Path.cwd().resolve()
+            / "cases"
+            / f"H={self.wave_height:0.2f}_L={self.wave_length:0.2f}_np={self.num_processors}"
+        )
 
     @step(condition=lambda self: not self.case_dir.exists() or self.force)
     def create_case_dir_if_not_exists(self):
