@@ -2,8 +2,11 @@ import subprocess
 from functools import cached_property
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader
-from lembas import Case, InputParameter, step
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
+from lembas import Case
+from lembas import InputParameter
+from lembas import step
 
 MESH_FILENAME = "control.txt"
 CONTROL_FILENAME = "ctrl.txt"
