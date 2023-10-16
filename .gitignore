@@ -21,9 +21,6 @@ wheels/
 *.egg
 MANIFEST
 
-# Ignore poetry.lock for a library
-poetry.lock
-
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -52,12 +49,11 @@ venv.bak/
 .vscode/
 
 # Example case outputs
-/examples/**/cases/
+/tutorials/**/cases/
 
 # Generated documentation
 /docs/build/
 /docs/source/api/
 
 # Version file
-/src/lembas/_version.py
-/tutorials/regular-wave-propagation/cases/
+/src/lembas_reef3d/_version.py
