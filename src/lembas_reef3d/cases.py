@@ -11,8 +11,9 @@ from lembas import step
 MESH_FILENAME = "control.txt"
 CONTROL_FILENAME = "ctrl.txt"
 
-TEMPLATE_DIR = Path.cwd().resolve() / "template"
-TEMPLATE_ENV = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+BASE_TEMPLATE_DIR = Path(__file__).parent / "templates"
+LOCAL_TEMPLATE_DIR = Path.cwd().resolve() / "templates"
+TEMPLATE_ENV = Environment(loader=FileSystemLoader([LOCAL_TEMPLATE_DIR, BASE_TEMPLATE_DIR]))
 
 
 class RegularWaveCase(Case):
