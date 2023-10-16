@@ -1,9 +1,10 @@
 # Local dev conda dependencies
 channels:
-- defaults
+- mattkram
 - conda-forge
 dependencies:
 - python=3.10
+- reef3d
 - pip
 - pip:
   - "-e ."
