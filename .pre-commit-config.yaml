@@ -7,6 +7,10 @@ repos:
   - id: check-yaml
   - id: check-toml
   - id: check-docstring-first
+- repo: https://github.com/Lucas-C/pre-commit-hooks
+  rev: v1.5.4
+  hooks:
+  - id: remove-crlf
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
   rev: v2.10.0
   hooks:
@@ -36,6 +40,7 @@ repos:
   rev: 6.0.0
   hooks:
   - id: flake8
+    args: ["--ignore", "E203,E501,W503"]
 - repo: https://github.com/igorshubovych/markdownlint-cli
   rev: v0.35.0
   hooks:
