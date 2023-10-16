@@ -14,7 +14,7 @@ TEMPLATE_ENV = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 class RegularWaveCase(Case):
     num_processors = InputParameter(default=8, min=1)
-    force = InputParameter(default=False)
+    force = InputParameter(default=False, control=True)
     wave_height = InputParameter(type=float, min=0.0)
     wave_length = InputParameter(type=float, min=0.0)
 
