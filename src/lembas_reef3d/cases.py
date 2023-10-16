@@ -29,6 +29,10 @@ class RegularWaveCase(Case):
             / f"H={self.wave_height:0.2f}_L={self.wave_length:0.2f}_np={self.num_processors}"
         )
 
+    def has_case_files(self, glob_pattern: str) -> bool:
+        """Return True if there is at least one file matching the provided glob pattern inside the case directory."""
+        return bool(list(self.case_dir.glob(glob_pattern)))
+
     @step(condition=lambda self: not self.case_dir.exists() or self.force)
     def create_case_dir_if_not_exists(self):
         self.log("Creating case directory: %s", self.case_dir)
@@ -36,7 +40,7 @@ class RegularWaveCase(Case):
 
     @step(
         requires="create_case_dir_if_not_exists",
-        condition=lambda self: not list(self.case_dir.glob("DIVEMesh_*")) or self.force,
+        condition=lambda self: not self.has_case_files("DIVEMesh_*") or self.force,
     )
     def generate_mesh(self):
         self.log("Generating mesh using DIVEMesh")
@@ -48,7 +52,7 @@ class RegularWaveCase(Case):
 
     @step(
         requires="generate_mesh",
-        condition=lambda self: not list(self.case_dir.glob("REEF3D_*")) or self.force,
+        condition=lambda self: not self.has_case_files("REEF3D_*") or self.force,
     )
     def run_reef3d(self):
         self.log("Running REEF3d")
