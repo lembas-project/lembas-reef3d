@@ -2,7 +2,6 @@ import subprocess
 from functools import cached_property
 from pathlib import Path
 
-import toml
 from jinja2 import Environment, FileSystemLoader
 from lembas import Case, InputParameter, step
 
@@ -55,14 +54,3 @@ class RegularWaveCase(Case):
             fp.write(template.render(case=self))
 
         subprocess.run(["mpirun", "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir))
-
-    def _write_lembas_file(self):
-        if self.case_dir:
-            self.create_case_dir_if_not_exists()
-            data = {"inputs": self.inputs, "case-handler": self.casehandler_full_name}
-            with (self.case_dir / "lembas-case.toml").open("w") as fp:
-                toml.dump({"lembas": data}, fp)
-
-    def run(self) -> None:
-        self._write_lembas_file()  # TODO: move to parent?
-        return super().run()
