@@ -3,13 +3,18 @@ import subprocess
 from functools import cached_property
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas
+import xarray
+import xarray as xr
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
 from lembas import Case
 from lembas import InputParameter
 from lembas import step
 from lembas.logging import logger
+from matplotlib import pyplot
 
 MESH_FILENAME = "control.txt"
 CONTROL_FILENAME = "ctrl.txt"
@@ -26,6 +31,7 @@ def result(m):
 class Results:
     wave_time_histories_simulation: pandas.DataFrame
     wave_time_histories_theory: pandas.DataFrame
+    line_probe: xarray.DataArray
 
 
 class RegularWaveCase(Case):
@@ -94,15 +100,45 @@ class RegularWaveCase(Case):
                 store.put("wave_time_histories_simulation", self.results.wave_time_histories_simulation)
                 store.put("wave_time_histories_theory", self.results.wave_time_histories_theory)
 
+    @step(requires="run_reef3d")
+    def load_line_probe_results(self):
+        line_probe_dir = self.case_dir / "REEF3D_FNPF_WSFLINE"
+
+        cdf_path = self.case_dir / "results.cdf"
+        if cdf_path.exists():
+            full_array = xr.open_dataset(cdf_path)["elevation"]
+        else:
+            time_slices = []
+            for f in sorted(line_probe_dir.glob("*.dat")):
+                sim_time, y_coords, df = _load_wave_elevation_line_probe(f)
+                arr = xr.DataArray(df, coords={"x": df.index.to_numpy(), "y": y_coords}, dims=["x", "y"]).expand_dims(
+                    {"time": [sim_time]}
+                )
+                time_slices.append(arr)
+
+            full_array = xr.concat(time_slices, dim="time")
+            full_array.attrs["long_name"] = "free-surface elevation"
+            full_array.attrs["units"] = "m"
+            full_array.x.attrs["units"] = "m"
+            full_array.y.attrs["units"] = "m"
+            full_array.time.attrs["units"] = "s"
+
+            xr.Dataset({"elevation": full_array}).to_netcdf(cdf_path)
+
+        self.results.line_probe = full_array
+
     @step(requires="load_wave_results")
     def plot_wave_results(self):
-        from matplotlib import pyplot
-
         ax = pyplot.gca()
         self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
         self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
 
         pyplot.show()
+
+    @step(requires="load_line_probe_results")
+    def plot_line_probe_results(self):
+        self.results.line_probe.isel(time=-1).plot.line(hue="y")
+        plt.show()
 
 
 def _load_wave_elevation_time_history(file: Path) -> pandas.DataFrame:
@@ -133,6 +169,45 @@ def _load_wave_elevation_time_history(file: Path) -> pandas.DataFrame:
 
         # Read rest of file as CSV
         df = pandas.read_csv(fp, delim_whitespace=True).set_index("time")
-        df.plot()
 
         return df
+
+
+def _load_wave_elevation_line_probe(file: Path) -> pandas.DataFrame:
+    print(file)
+    with file.open("r") as fp:
+        if m := re.match(r"simtime:\s*(\w+)", fp.readline()):
+            sim_time = float(m.group(1))
+        else:
+            sim_time = 0
+
+        logger.info(f"{sim_time=}")
+
+        if m := re.match(r"number\s*of\s*wsf-lines:\s*(\d+)", fp.readline()):
+            num_lines = int(m.group(1))
+        else:
+            num_lines = 0
+
+        logger.info(f"{num_lines=}")
+
+        fp.readline()  # Blank line
+        fp.readline()  # Header: line_No, y_coord
+
+        for _ in range(num_lines):
+            fp.readline()
+        fp.readline()  # Wave Theory
+
+        # Read rest of file as CSV
+        fp.readline()
+        fp.readline()
+        fp.readline()
+        df = (
+            pandas.read_csv(
+                fp, delim_whitespace=True, header=None, names=["X", *(f"P{i}" for i in range(1, num_lines + 1)), "W"]
+            )
+            # .drop(columns=["W"])
+            .set_index("X")
+        )
+        print(df)
+
+        return sim_time, [0.005, np.inf], df
