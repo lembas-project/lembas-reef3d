@@ -5,8 +5,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas
-import xarray
+import pandas as pd
 import xarray as xr
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
@@ -14,7 +13,6 @@ from lembas import Case
 from lembas import InputParameter
 from lembas import step
 from lembas.logging import logger
-from matplotlib import pyplot
 
 MESH_FILENAME = "control.txt"
 CONTROL_FILENAME = "ctrl.txt"
@@ -29,9 +27,9 @@ def result(m):
 
 
 class Results:
-    wave_time_histories_simulation: pandas.DataFrame
-    wave_time_histories_theory: pandas.DataFrame
-    line_probe: xarray.DataArray
+    wave_time_histories_simulation: pd.DataFrame
+    wave_time_histories_theory: pd.DataFrame
+    line_probe: xr.DataArray
 
 
 class RegularWaveCase(Case):
@@ -85,7 +83,7 @@ class RegularWaveCase(Case):
     @result
     def load_wave_results(self):
         self.results = Results()
-        with pandas.HDFStore(self.case_dir / "results.h5") as store:
+        with pd.HDFStore(self.case_dir / "results.h5") as store:
             try:
                 self.results.wave_time_histories_simulation = store.get("wave_time_histories_simulation")
                 self.results.wave_time_histories_theory = store.get("wave_time_histories_theory")
@@ -129,11 +127,11 @@ class RegularWaveCase(Case):
 
     @step(requires="load_wave_results")
     def plot_wave_results(self):
-        ax = pyplot.gca()
+        ax = plt.gca()
         self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
         self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
 
-        pyplot.show()
+        plt.show()
 
     @step(requires="load_line_probe_results")
     def plot_line_probe_results(self):
@@ -141,7 +139,7 @@ class RegularWaveCase(Case):
         plt.show()
 
 
-def _load_wave_elevation_time_history(file: Path) -> pandas.DataFrame:
+def _load_wave_elevation_time_history(file: Path) -> pd.DataFrame:
     """Load the wave elevation time histories for a series of wave gauges from a file inside
     the REEF3D_FNPF_WSF directory.
 
@@ -158,7 +156,7 @@ def _load_wave_elevation_time_history(file: Path) -> pandas.DataFrame:
         coord_data = [fp.readline().split() for _ in range(num_gauges)]
 
         coord_df = (
-            pandas.DataFrame(coord_data)
+            pd.DataFrame(coord_data)
             .rename(columns={0: "point", 1: "x_coord", 2: "y_coord"})
             .astype("float64")
             .astype({"point": "int32"})
@@ -168,12 +166,12 @@ def _load_wave_elevation_time_history(file: Path) -> pandas.DataFrame:
         # print(coord_df)
 
         # Read rest of file as CSV
-        df = pandas.read_csv(fp, delim_whitespace=True).set_index("time")
+        df = pd.read_csv(fp, delim_whitespace=True).set_index("time")
 
         return df
 
 
-def _load_wave_elevation_line_probe(file: Path) -> pandas.DataFrame:
+def _load_wave_elevation_line_probe(file: Path) -> pd.DataFrame:
     print(file)
     with file.open("r") as fp:
         if m := re.match(r"simtime:\s*(\w+)", fp.readline()):
@@ -202,7 +200,7 @@ def _load_wave_elevation_line_probe(file: Path) -> pandas.DataFrame:
         fp.readline()
         fp.readline()
         df = (
-            pandas.read_csv(
+            pd.read_csv(
                 fp, delim_whitespace=True, header=None, names=["X", *(f"P{i}" for i in range(1, num_lines + 1)), "W"]
             )
             # .drop(columns=["W"])
