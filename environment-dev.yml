@@ -1,10 +1,13 @@
 # Local dev conda dependencies
 channels:
 - mattkram
+- mattkram/label/dev
 - conda-forge
 dependencies:
 - python=3.10
 - reef3d
+- lembas
+- jinja2
 - pip
 - pip:
   - "-e ."
