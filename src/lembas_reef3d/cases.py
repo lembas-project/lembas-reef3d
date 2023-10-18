@@ -112,23 +112,20 @@ class RegularWaveCase(Case):
 
         cdf_path = self.case_dir / "results.cdf"
         if cdf_path.exists():
-            full_array = xr.open_dataset(cdf_path)["elevation"]
+            arr = xr.open_dataset(cdf_path)["elevation"]
         else:
-            time_slices = []
-            for f in sorted(line_probe_dir.glob("*.dat")):
-                arr = _load_wave_elevation_line_probe(f)
-                time_slices.append(arr)
+            arr = xr.concat(
+                [_load_wave_elevation_line_probe(f) for f in sorted(line_probe_dir.glob("*.dat"))], dim="time"
+            )
+            arr.attrs["long_name"] = "free-surface elevation"
+            arr.attrs["units"] = "m"
+            arr.x.attrs["units"] = "m"
+            arr.y.attrs["units"] = "m"
+            arr.time.attrs["units"] = "s"
 
-            full_array = xr.concat(time_slices, dim="time")
-            full_array.attrs["long_name"] = "free-surface elevation"
-            full_array.attrs["units"] = "m"
-            full_array.x.attrs["units"] = "m"
-            full_array.y.attrs["units"] = "m"
-            full_array.time.attrs["units"] = "s"
+            xr.Dataset({"elevation": arr}).to_netcdf(cdf_path)
 
-            xr.Dataset({"elevation": full_array}).to_netcdf(cdf_path)
-
-        self.results.line_probe = full_array
+        self.results.line_probe = arr
 
     @step(requires="load_wave_results", condition=lambda case: case.plot)
     def plot_wave_results(self):
@@ -183,14 +180,14 @@ def _load_wave_elevation_line_probe(file: Path) -> xr.DataArray:
         else:
             sim_time = 0
 
-        logger.info(f"{sim_time=}")
+        logger.debug(f"{sim_time=}")
 
         if m := re.match(r"number\s*of\s*wsf-lines:\s*(\d+)", fp.readline()):
             num_lines = int(m.group(1))
         else:
             num_lines = 0
 
-        logger.info(f"{num_lines=}")
+        logger.debug(f"{num_lines=}")
 
         fp.readline()  # Blank line
         fp.readline()  # Header: line_No, y_coord
