@@ -1,9 +1,9 @@
 import re
 import subprocess
+from functools import cache
 from functools import cached_property
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -22,6 +22,13 @@ LOCAL_TEMPLATE_DIR = Path.cwd().resolve() / "templates"
 TEMPLATE_ENV = Environment(loader=FileSystemLoader([LOCAL_TEMPLATE_DIR, BASE_TEMPLATE_DIR]))
 
 
+@cache
+def plt():
+    import matplotlib.pyplot as plt
+
+    return plt
+
+
 def result(m):
     return m
 
@@ -35,6 +42,7 @@ class Results:
 class RegularWaveCase(Case):
     num_processors = InputParameter(default=8, min=1)
     force = InputParameter(default=False, control=True)
+    plot = InputParameter(default=False, control=True)
     wave_height = InputParameter(type=float, min=0.0)
     wave_length = InputParameter(type=float, min=0.0)
 
@@ -125,18 +133,17 @@ class RegularWaveCase(Case):
 
         self.results.line_probe = full_array
 
-    @step(requires="load_wave_results")
+    @step(requires="load_wave_results", condition=lambda case: case.plot)
     def plot_wave_results(self):
-        ax = plt.gca()
+        ax = plt().gca()
         self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
         self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
+        plt().show()
 
-        plt.show()
-
-    @step(requires="load_line_probe_results")
+    @step(requires="load_line_probe_results", condition=lambda case: case.plot)
     def plot_line_probe_results(self):
         self.results.line_probe.isel(time=-1).plot.line(hue="y")
-        plt.show()
+        plt().show()
 
 
 def _load_wave_elevation_time_history(file: Path) -> pd.DataFrame:
