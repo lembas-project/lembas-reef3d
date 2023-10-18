@@ -116,10 +116,7 @@ class RegularWaveCase(Case):
         else:
             time_slices = []
             for f in sorted(line_probe_dir.glob("*.dat")):
-                sim_time, y_coords, df = _load_wave_elevation_line_probe(f)
-                arr = xr.DataArray(df, coords={"x": df.index.to_numpy(), "y": y_coords}, dims=["x", "y"]).expand_dims(
-                    {"time": [sim_time]}
-                )
+                arr = _load_wave_elevation_line_probe(f)
                 time_slices.append(arr)
 
             full_array = xr.concat(time_slices, dim="time")
@@ -178,8 +175,8 @@ def _load_wave_elevation_time_history(file: Path) -> pd.DataFrame:
         return df
 
 
-def _load_wave_elevation_line_probe(file: Path) -> pd.DataFrame:
-    print(file)
+def _load_wave_elevation_line_probe(file: Path) -> xr.DataArray:
+    """Load the wave elevation results along line probes for a single timestep."""
     with file.open("r") as fp:
         if m := re.match(r"simtime:\s*(\w+)", fp.readline()):
             sim_time = float(m.group(1))
@@ -198,6 +195,9 @@ def _load_wave_elevation_line_probe(file: Path) -> pd.DataFrame:
         fp.readline()  # Blank line
         fp.readline()  # Header: line_No, y_coord
 
+        # TODO: Load y_coords from file instead of hard-coding
+        y_coords = [0.005, np.inf]
+
         for _ in range(num_lines):
             fp.readline()
         fp.readline()  # Wave Theory
@@ -206,13 +206,10 @@ def _load_wave_elevation_line_probe(file: Path) -> pd.DataFrame:
         fp.readline()
         fp.readline()
         fp.readline()
-        df = (
-            pd.read_csv(
-                fp, delim_whitespace=True, header=None, names=["X", *(f"P{i}" for i in range(1, num_lines + 1)), "W"]
-            )
-            # .drop(columns=["W"])
-            .set_index("X")
-        )
-        print(df)
+        df = pd.read_csv(
+            fp, delim_whitespace=True, header=None, names=["X", *(f"P{i}" for i in range(1, num_lines + 1)), "W"]
+        ).set_index("X")
 
-        return sim_time, [0.005, np.inf], df
+        return xr.DataArray(df, coords={"x": df.index.to_numpy(), "y": y_coords}, dims=["x", "y"]).expand_dims(
+            {"time": [sim_time]}
+        )
