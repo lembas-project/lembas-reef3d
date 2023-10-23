@@ -3,6 +3,8 @@ from functools import cache
 from functools import cached_property
 from pathlib import Path
 from typing import Any
+from typing import Callable
+from typing import TypeVar
 
 import pandas as pd
 import xarray as xr
@@ -23,6 +25,10 @@ LOCAL_TEMPLATE_DIR = Path.cwd().resolve() / "templates"
 TEMPLATE_ENV = Environment(loader=FileSystemLoader([LOCAL_TEMPLATE_DIR, BASE_TEMPLATE_DIR]))
 
 
+TCase = TypeVar("TCase", bound="Case")
+RawCaseMethod = Callable[[TCase], None]
+
+
 @cache
 def plt():
     import matplotlib.pyplot as plt
@@ -30,14 +36,75 @@ def plt():
     return plt
 
 
-def result(m):
-    return m
+def result(*names: str):
+    """A decorator to annotate a method that provides result(s).
+
+    The decorator accepts a variadic list of names for the provided result(s). The method
+    can return a single object or a tuple of objects, which must map to the number of names
+    provided. The results are then available from within other case handler methods like
+    self.results.result_name.
+
+    """
+
+    def decorator(m: RawCaseMethod):
+        # Here, we attach the tuple of names to the method function object. We have to do
+        # this because we do not have access to the class object at the time when the
+        # decorator is called. The actual discovery of the name mapping is performed
+        # during attribute access on the case.results object, which does a search across
+        # the methods attached to the class at runtime.
+        m._provides_results = names  # type: ignore
+        return m
+
+    return decorator
 
 
 class Results:
-    wave_time_histories_simulation: pd.DataFrame
-    wave_time_histories_theory: pd.DataFrame
-    line_probe: xr.DataArray
+    """A generic container for results of a case.
+
+    Implements lazy loading of results, where the result accessors are specified by @result
+    decorator.
+
+    """
+
+    def __init__(self, parent: Case):
+        self._parent = parent
+
+    def __getattr__(self, item: str) -> Any:
+        if item in self.__dict__:
+            return self.__dict__[item]
+
+        # During attribute access, we search the class for methods to which have been
+        # attached a "_provides_results" tuple. If we find that, and the requested
+        # result is in that tuple, we call the method (once) and cache the results in
+        # the self.__dict__ for later, faster retrieval.
+        cls = self._parent.__class__
+        for method_name, method_func in cls.__dict__.items():
+            try:
+                provides_results = getattr(method_func, "_provides_results")
+            except AttributeError:
+                continue  # to next method
+
+            provides_results = provides_results or tuple()
+            if item not in provides_results:
+                continue
+
+            results = method_func(self._parent)
+            if not isinstance(results, tuple):
+                results = (results,)
+
+            num_expected_results = len(provides_results)
+            num_results = len(results)
+            if num_expected_results != num_results:
+                raise ValueError(
+                    f"Results method {method_name} returns {num_results} items, "
+                    f"only {num_expected_results} results are declared in the @result "
+                    "decorator."
+                )
+
+            for n, r in zip(provides_results, results):
+                setattr(self, n, r)
+
+        return self.__dict__[item]
 
 
 class RegularWaveCase(Case):
@@ -48,8 +115,9 @@ class RegularWaveCase(Case):
     wave_length = InputParameter(type=float, min=0.0)
 
     def __init__(self, **kwargs: Any):
+        # TODO: Move this and Results class to lembas-core
         super().__init__(**kwargs)
-        self.results = Results()
+        self.results = Results(parent=self)
 
     @cached_property
     def case_dir(self) -> Path:
@@ -93,25 +161,27 @@ class RegularWaveCase(Case):
         subprocess.run(["mpirun", "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir))
 
     @step(requires="run_reef3d")
-    @result
-    def load_wave_results(self):
+    @result("wave_time_histories_simulation", "wave_time_histories_theory")
+    def load_wave_results(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         with pd.HDFStore(self.case_dir / "results.h5") as store:
             try:
-                self.results.wave_time_histories_simulation = store.get("wave_time_histories_simulation")
-                self.results.wave_time_histories_theory = store.get("wave_time_histories_theory")
+                wave_time_histories_simulation = store.get("wave_time_histories_simulation")
+                wave_time_histories_theory = store.get("wave_time_histories_theory")
             except KeyError:
                 self.log("Processing wave elevation results")
-                self.results.wave_time_histories_simulation = load_wave_elevation_time_history(
+                wave_time_histories_simulation = load_wave_elevation_time_history(
                     self.case_dir / "REEF3D_FNPF_WSF" / "REEF3D-FNPF-WSF-HG.dat"
                 )
-                self.results.wave_time_histories_theory = load_wave_elevation_time_history(
+                wave_time_histories_theory = load_wave_elevation_time_history(
                     self.case_dir / "REEF3D_FNPF_WSF" / "REEF3D-FNPF-WSF-HG-THEORY.dat"
                 )
                 store.put("wave_time_histories_simulation", self.results.wave_time_histories_simulation)
                 store.put("wave_time_histories_theory", self.results.wave_time_histories_theory)
+            return wave_time_histories_simulation, wave_time_histories_theory
 
     @step(requires="run_reef3d")
-    def load_line_probe_results(self):
+    @result("line_probe")
+    def load_line_probe_results(self) -> xr.DataArray:
         cdf_path = self.case_dir / "results.cdf"
         if cdf_path.exists():
             arr = xr.open_dataset(cdf_path)["elevation"]
@@ -128,7 +198,7 @@ class RegularWaveCase(Case):
 
             xr.Dataset({"elevation": arr}).to_netcdf(cdf_path)
 
-        self.results.line_probe = arr
+        return arr
 
     @step(requires="load_wave_results", condition=lambda case: case.plot)
     def plot_wave_results(self):
