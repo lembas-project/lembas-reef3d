@@ -220,8 +220,8 @@ class RegularWaveCase(Case):
     @step(requires="run_reef3d", condition="plot")
     def plot_wave_results(self):
         ax = plt().gca()
-        self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
-        self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
+        self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
+        self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
         plt().show()
 
     @step(requires="run_reef3d", condition="not skip_plot")
