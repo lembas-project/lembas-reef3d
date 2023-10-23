@@ -160,7 +160,6 @@ class RegularWaveCase(Case):
 
         subprocess.run(["mpirun", "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir))
 
-    @step(requires="run_reef3d")
     @result("wave_time_histories_simulation", "wave_time_histories_theory")
     def load_wave_results(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         with pd.HDFStore(self.case_dir / "results.h5") as store:
@@ -179,7 +178,6 @@ class RegularWaveCase(Case):
                 store.put("wave_time_histories_theory", self.results.wave_time_histories_theory)
             return wave_time_histories_simulation, wave_time_histories_theory
 
-    @step(requires="run_reef3d")
     @result("line_probe")
     def load_line_probe_results(self) -> xr.DataArray:
         cdf_path = self.case_dir / "results.cdf"
@@ -200,14 +198,14 @@ class RegularWaveCase(Case):
 
         return arr
 
-    @step(requires="load_wave_results", condition=lambda case: case.plot)
+    @step(requires="run_reef3d", condition=lambda case: case.plot)
     def plot_wave_results(self):
         ax = plt().gca()
         self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
         self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
         plt().show()
 
-    @step(requires="load_line_probe_results", condition=lambda case: case.plot)
+    @step(requires="run_reef3d", condition=lambda case: case.plot)
     def plot_line_probe_results(self):
         self.results.line_probe.isel(time=-1).plot.line(hue="y")
         plt().show()
