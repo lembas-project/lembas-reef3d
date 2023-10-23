@@ -129,6 +129,7 @@ class RegularWaveCase(Case):
     num_processors = InputParameter(default=8, min=1)
     force = InputParameter(default=False, control=True)
     plot = InputParameter(default=False, control=True)
+    skip_plot = InputParameter(default=False, control=True)
     wave_height = InputParameter(type=float, min=0.0)
     wave_length = InputParameter(type=float, min=0.0)
 
@@ -216,14 +217,14 @@ class RegularWaveCase(Case):
 
         return arr
 
-    @step(requires="run_reef3d", condition=lambda case: case.plot)
+    @step(requires="run_reef3d", condition="plot")
     def plot_wave_results(self):
         ax = plt().gca()
         self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
         self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
         plt().show()
 
-    @step(requires="run_reef3d", condition=lambda case: case.plot)
+    @step(requires="run_reef3d", condition="not skip_plot")
     def plot_line_probe_results(self):
         self.results.line_probes.isel(time=-1).plot.line(hue="y")
         plt().show()
