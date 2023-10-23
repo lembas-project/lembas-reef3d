@@ -36,7 +36,7 @@ def plt():
     return plt
 
 
-def result(*names: str):
+def result(*func_or_names: Callable[[TCase], Any] | str):
     """A decorator to annotate a method that provides result(s).
 
     The decorator accepts a variadic list of names for the provided result(s). The method
@@ -45,6 +45,21 @@ def result(*names: str):
     self.results.result_name.
 
     """
+
+    if any(callable(fn) for fn in func_or_names):
+        # This case captures the non-argument form, i.e. @result
+        # In this case, there should only be one argument, which is
+        # the decorated method.
+        try:
+            (method,) = func_or_names
+        except ValueError:
+            raise ValueError("Must only provide a single callable")
+        names = (method.__name__,)  # type: ignore
+        method._provides_results = names  # type: ignore
+        return method
+
+    # We now handle the case with arguments, i.e. @result("name1", "name2")
+    names = func_or_names  # type: ignore
 
     def decorator(m: RawCaseMethod):
         # Here, we attach the tuple of names to the method function object. We have to do
@@ -104,7 +119,10 @@ class Results:
             for n, r in zip(provides_results, results):
                 setattr(self, n, r)
 
-        return self.__dict__[item]
+        try:
+            return self.__dict__[item]
+        except KeyError:
+            raise AttributeError(f"Result '{item}' is not defined")
 
 
 class RegularWaveCase(Case):
@@ -178,8 +196,8 @@ class RegularWaveCase(Case):
                 store.put("wave_time_histories_theory", self.results.wave_time_histories_theory)
             return wave_time_histories_simulation, wave_time_histories_theory
 
-    @result("line_probe")
-    def load_line_probe_results(self) -> xr.DataArray:
+    @result
+    def line_probe(self) -> xr.DataArray:
         cdf_path = self.case_dir / "results.cdf"
         if cdf_path.exists():
             arr = xr.open_dataset(cdf_path)["elevation"]
@@ -197,13 +215,6 @@ class RegularWaveCase(Case):
             xr.Dataset({"elevation": arr}).to_netcdf(cdf_path)
 
         return arr
-
-    @step(requires="run_reef3d", condition=lambda case: case.plot)
-    def plot_wave_results(self):
-        ax = plt().gca()
-        self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
-        self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
-        plt().show()
 
     @step(requires="run_reef3d", condition=lambda case: case.plot)
     def plot_line_probe_results(self):
