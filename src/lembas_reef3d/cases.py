@@ -108,12 +108,11 @@ class RegularWaveCase(Case):
 
     @step(requires="run_reef3d")
     def load_line_probe_results(self):
-        line_probe_dir = self.case_dir / "REEF3D_FNPF_WSFLINE"
-
         cdf_path = self.case_dir / "results.cdf"
         if cdf_path.exists():
             arr = xr.open_dataset(cdf_path)["elevation"]
         else:
+            line_probe_dir = self.case_dir / "REEF3D_FNPF_WSFLINE"
             arr = xr.concat(
                 [load_wave_elevation_line_probe(f) for f in sorted(line_probe_dir.glob("*.dat"))], dim="time"
             )
