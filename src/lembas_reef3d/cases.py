@@ -146,6 +146,10 @@ class RegularWaveCase(Case):
             / f"H={self.wave_height:0.2f}_L={self.wave_length:0.2f}_np={self.num_processors}"
         )
 
+    @cached_property
+    def fig_dir(self) -> Path:
+        return self.case_dir / "figures"
+
     def has_case_files(self, glob_pattern: str) -> bool:
         """Return True if there is at least one file matching the provided glob pattern inside the case directory."""
         return bool(list(self.case_dir.glob(glob_pattern)))
@@ -193,8 +197,8 @@ class RegularWaveCase(Case):
                 wave_time_histories_theory = load_wave_elevation_time_history(
                     self.case_dir / "REEF3D_FNPF_WSF" / "REEF3D-FNPF-WSF-HG-THEORY.dat"
                 )
-                store.put("wave_time_histories_simulation", self.results.wave_time_histories_simulation)
-                store.put("wave_time_histories_theory", self.results.wave_time_histories_theory)
+                store.put("wave_time_histories_simulation", wave_time_histories_simulation)
+                store.put("wave_time_histories_theory", wave_time_histories_theory)
             return wave_time_histories_simulation, wave_time_histories_theory
 
     @result
@@ -219,12 +223,21 @@ class RegularWaveCase(Case):
 
     @step(requires="run_reef3d", condition="plot")
     def plot_wave_results(self):
-        ax = plt().gca()
-        self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
-        self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
-        plt().show()
+        fig_path = self.fig_dir / "time_history.png"
+        if not fig_path.exists():
+            fig, ax = plt().subplots(1, 1)
+            self.results.wave_time_histories_theory.plot(ax=ax, style={"P1": "r-", "P2": "b-", "P3": "g-"})
+            self.results.wave_time_histories_simulation.plot(ax=ax, style={"P1": "r.", "P2": "b.", "P3": "g."})
+
+            self.fig_dir.mkdir(exist_ok=True, parents=True)
+            fig.savefig(fig_path)
 
     @step(requires="run_reef3d", condition="not skip_plot")
     def plot_line_probe_results(self):
-        self.results.line_probes.isel(time=-1).plot.line(hue="y")
-        plt().show()
+        fig_path = self.fig_dir / "probe_results.png"
+        if not fig_path.exists():
+            fig, ax = plt().subplots(1, 1)
+            self.results.line_probes.isel(time=-1).plot.line(ax=ax, hue="y")
+
+            self.fig_dir.mkdir(exist_ok=True, parents=True)
+            fig.savefig(fig_path)
