@@ -2,6 +2,7 @@ import subprocess
 from functools import cache
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import xarray as xr
@@ -45,6 +46,10 @@ class RegularWaveCase(Case):
     plot = InputParameter(default=False, control=True)
     wave_height = InputParameter(type=float, min=0.0)
     wave_length = InputParameter(type=float, min=0.0)
+
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+        self.results = Results()
 
     @cached_property
     def case_dir(self) -> Path:
@@ -90,7 +95,6 @@ class RegularWaveCase(Case):
     @step(requires="run_reef3d")
     @result
     def load_wave_results(self):
-        self.results = Results()
         with pd.HDFStore(self.case_dir / "results.h5") as store:
             try:
                 self.results.wave_time_histories_simulation = store.get("wave_time_histories_simulation")
