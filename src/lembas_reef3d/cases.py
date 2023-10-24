@@ -2,8 +2,6 @@ import subprocess
 from functools import cache
 from functools import cached_property
 from pathlib import Path
-from typing import Callable
-from typing import TypeVar
 
 import pandas as pd
 import xarray as xr
@@ -23,10 +21,6 @@ CONTROL_FILENAME = "ctrl.txt"
 BASE_TEMPLATE_DIR = Path(__file__).parent / "templates"
 LOCAL_TEMPLATE_DIR = Path.cwd().resolve() / "templates"
 TEMPLATE_ENV = Environment(loader=FileSystemLoader([LOCAL_TEMPLATE_DIR, BASE_TEMPLATE_DIR]))
-
-
-TCase = TypeVar("TCase", bound="Case")
-RawCaseMethod = Callable[[TCase], None]
 
 
 @cache
