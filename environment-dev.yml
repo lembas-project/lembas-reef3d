@@ -5,9 +5,14 @@ channels:
 - conda-forge
 dependencies:
 - python=3.10
-- reef3d
 - lembas
+- reef3d
 - jinja2
+- pandas
+- xarray
+- matplotlib
+- pytables
+- scipy
 - pip
 - pip:
   - "-e ."
