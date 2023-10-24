@@ -17,7 +17,7 @@ def load_wave_elevation_time_history(file: Path) -> pd.DataFrame:
             num_gauges = int(m.group(1))
         else:
             num_gauges = 0
-        logger.info(f"num gauges: {num_gauges}")
+        logger.debug(f"num gauges: {num_gauges}")
 
         fp.readline()  # Blank line
         fp.readline()  # Header: x_coord  y_coord
