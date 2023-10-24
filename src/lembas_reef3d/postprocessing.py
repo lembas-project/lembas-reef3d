@@ -31,7 +31,6 @@ def load_wave_elevation_time_history(file: Path) -> pd.DataFrame:
             .set_index("point")
         )
         _ = coord_df
-        # print(coord_df)
 
         # Read rest of file as CSV
         df = pd.read_csv(fp, delim_whitespace=True).set_index("time")
