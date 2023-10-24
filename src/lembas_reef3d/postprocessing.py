@@ -58,12 +58,13 @@ def load_wave_elevation_line_probe(file: Path) -> xr.DataArray:
         fp.readline()  # Blank line
         fp.readline()  # Header: line_No, y_coord
 
-        # TODO: Load y_coords from file instead of hard-coding
-        y_coords = [0.005, np.inf]
+        y_coords = []
 
         for _ in range(num_lines):
-            fp.readline()
+            _, y_coord = fp.readline().split()
+            y_coords.append(float(y_coord))
         fp.readline()  # Wave Theory
+        y_coords.append(np.inf)
 
         # Read rest of file as CSV
         fp.readline()
