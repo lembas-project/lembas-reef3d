@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from functools import cache
 from functools import cached_property
 from pathlib import Path
@@ -21,6 +22,9 @@ CONTROL_FILENAME = "ctrl.txt"
 BASE_TEMPLATE_DIR = Path(__file__).parent / "templates"
 LOCAL_TEMPLATE_DIR = Path.cwd().resolve() / "templates"
 TEMPLATE_ENV = Environment(loader=FileSystemLoader([LOCAL_TEMPLATE_DIR, BASE_TEMPLATE_DIR]))
+
+# divemesh and reef3d should be in same directory as python in a conda environment
+BIN_DIR = Path(sys.executable).parent
 
 
 @cache
@@ -75,7 +79,9 @@ class RegularWaveCase(Case):
         with (self.case_dir / MESH_FILENAME).open("w") as fp:
             fp.write(template.render(num_processors=self.num_processors))
 
-        subprocess.run(["divemesh"], cwd=str(self.case_dir))
+        result = subprocess.run([str(BIN_DIR / "divemesh")], cwd=str(self.case_dir))
+        if result.returncode != 0:
+            sys.exit(result.returncode)
 
     @step(
         requires="generate_mesh",
@@ -87,7 +93,11 @@ class RegularWaveCase(Case):
         with (self.case_dir / CONTROL_FILENAME).open("w") as fp:
             fp.write(template.render(case=self))
 
-        subprocess.run(["mpirun", "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir))
+        result = subprocess.run(
+            [str(BIN_DIR / "mpirun"), "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir)
+        )
+        if result.returncode != 0:
+            sys.exit(result.returncode)
 
     @result("wave_time_histories_simulation", "wave_time_histories_theory")
     def load_wave_results(self) -> tuple[pd.DataFrame, pd.DataFrame]:
