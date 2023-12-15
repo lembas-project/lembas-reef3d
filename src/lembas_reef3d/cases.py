@@ -79,7 +79,9 @@ class RegularWaveCase(Case):
         with (self.case_dir / MESH_FILENAME).open("w") as fp:
             fp.write(template.render(num_processors=self.num_processors))
 
-        subprocess.run([str(BIN_DIR / "divemesh")], cwd=str(self.case_dir))
+        result = subprocess.run([str(BIN_DIR / "divemesh")], cwd=str(self.case_dir))
+        if result.returncode != 0:
+            sys.exit(result.returncode)
 
     @step(
         requires="generate_mesh",
@@ -91,7 +93,11 @@ class RegularWaveCase(Case):
         with (self.case_dir / CONTROL_FILENAME).open("w") as fp:
             fp.write(template.render(case=self))
 
-        subprocess.run([str(BIN_DIR / "mpirun"), "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir))
+        result = subprocess.run(
+            [str(BIN_DIR / "mpirun"), "-n", str(self.num_processors), "reef3d"], cwd=str(self.case_dir)
+        )
+        if result.returncode != 0:
+            sys.exit(result.returncode)
 
     @result("wave_time_histories_simulation", "wave_time_histories_theory")
     def load_wave_results(self) -> tuple[pd.DataFrame, pd.DataFrame]:
